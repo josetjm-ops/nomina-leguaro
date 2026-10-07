@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2e6b3a">
+<title>Nómina Leguaro</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Roboto, Arial, sans-serif; font-size: 18px; background: #f2f5ef; color: #1d2b1f; }
+  header { background: #2e6b3a; color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 2; }
+  header b { display: block; font-size: 20px; }
+  header span { font-size: 15px; opacity: .9; }
+  main { padding: 14px 14px 90px; max-width: 560px; margin: 0 auto; }
+  h2 { font-size: 19px; margin: 20px 0 8px; }
+  button { font: inherit; border: 0; border-radius: 12px; padding: 16px; width: 100%; cursor: pointer; }
+  .principal { background: #2e6b3a; color: #fff; font-weight: bold; font-size: 20px; }
+  .secundario { background: #fff; color: #2e6b3a; border: 2px solid #2e6b3a; font-weight: bold; }
+  .opcion { background: #fff; border: 2px solid #c9d6c5; text-align: left; margin-bottom: 8px; }
+  .opcion.sel { background: #dff0d8; border-color: #2e6b3a; font-weight: bold; }
+  .fila { display: flex; gap: 8px; }
+  .fila > * { flex: 1; }
+  input, textarea { font: inherit; width: 100%; padding: 14px; border: 2px solid #c9d6c5; border-radius: 12px; background: #fff; }
+  .cant { display: flex; gap: 8px; align-items: center; }
+  .cant button { width: 64px; flex: none; font-size: 26px; font-weight: bold; background: #fff; border: 2px solid #2e6b3a; color: #2e6b3a; }
+  .cant input { text-align: center; font-size: 24px; font-weight: bold; }
+  .tarjeta { background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .tarjeta small { color: #5c6b5e; display: block; }
+  .borrar { width: auto; padding: 8px 14px; background: #fbe4e1; color: #a12a1c; float: right; font-size: 16px; }
+  .neto { font-size: 22px; font-weight: bold; color: #2e6b3a; }
+  .aviso { padding: 12px; border-radius: 12px; margin: 10px 0; }
+  .ok { background: #dff0d8; } .mal { background: #fbe4e1; color: #a12a1c; }
+  .oculto { display: none; }
+  table { width: 100%; font-size: 15px; border-collapse: collapse; margin-top: 6px; }
+  td { padding: 2px 0; } td:last-child { text-align: right; white-space: nowrap; }
+  #cargando { position: fixed; inset: 0; background: rgba(255,255,255,.75); display: none; align-items: center; justify-content: center; font-weight: bold; z-index: 5; }
+</style>
+</head>
+<body>
+<header><b id="tEmpresa">Nómina</b><span id="tPeriodo"></span></header>
+<div id="cargando">Un momento…</div>
+<main>
+  <div id="aviso" class="aviso oculto"></div>
+
+  <section id="pClave">
+    <h2>Escriba la clave</h2>
+    <input id="clave" type="password" inputmode="numeric" autocomplete="off">
+    <p><button class="principal" onclick="entrar()">Entrar</button></p>
+  </section>
+
+  <section id="pInicio" class="oculto">
+    <p><button class="principal" onclick="abrirFormulario()">＋ Anotar novedad</button></p>
+    <p><button class="secundario" onclick="verLiquidacion()">Ver liquidación de la quincena</button></p>
+    <div class="fila">
+      <button id="bActual" class="opcion" onclick="cambiarPeriodo(D.actual)">Esta quincena</button>
+      <button id="bAnterior" class="opcion" onclick="cambiarPeriodo(D.anterior)">Quincena pasada</button>
+    </div>
+    <h2>Novedades anotadas</h2>
+    <div id="lista"></div>
+  </section>
+
+  <section id="pForm" class="oculto">
+    <h2>1. ¿Quién?</h2><div id="fEmpleados"></div>
+    <h2>2. ¿Qué pasó?</h2>
+    <div class="fila">
+      <button class="opcion" data-cat="extras" onclick="elegirCat('extras')">Extras y festivos</button>
+      <button class="opcion" data-cat="ausencias" onclick="elegirCat('ausencias')">No vino</button>
+    </div>
+    <div class="fila">
+      <button class="opcion" data-cat="descuentos" onclick="elegirCat('descuentos')">Descuento</button>
+      <button class="opcion" data-cat="pagos" onclick="elegirCat('pagos')">Pago adicional</button>
+    </div>
+    <div id="fTipos"></div>
+    <div id="fDetalle" class="oculto">
+      <h2 id="tFecha">3. ¿Qué día?</h2><input id="fFecha" type="date">
+      <h2 id="tCantidad">4. ¿Cuánto?</h2>
+      <div class="cant"><button onclick="sumar(-1)">−</button><input id="fCantidad" type="number" inputmode="decimal" min="0"><button onclick="sumar(1)">＋</button></div>
+      <p id="pDia" class="oculto"><button class="secundario" onclick="diaCompleto()">Día completo</button></p>
+      <h2>Nota (opcional)</h2><textarea id="fObs" rows="2"></textarea>
+      <p><button class="principal" onclick="guardar()">Guardar</button></p>
+    </div>
+    <p><button class="secundario" onclick="mostrar('pInicio')">Volver</button></p>
+  </section>
+
+  <section id="pLiq" class="oculto">
+    <h2>Liquidación de la quincena</h2>
+    <div id="liqDetalle"></div>
+    <p><button class="principal" onclick="liquidar()">Cerrar quincena y enviar desprendibles</button></p>
+    <p><button class="secundario" onclick="mostrar('pInicio')">Volver</button></p>
+  </section>
+</main>
+
+<script>
+  var D = null, pin = '', sel = { idEmp: '', cat: '', tipo: '' };
+  var $ = function (id) { return document.getElementById(id); };
+  var pesos = function (v) { return '$ ' + Math.round(v).toLocaleString('es-CO'); };
+  var esc = function (s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
+
+  function cargando(si) { $('cargando').style.display = si ? 'flex' : 'none'; }
+  function aviso(texto, mal) {
+    var a = $('aviso'); a.textContent = texto; a.className = 'aviso ' + (mal ? 'mal' : 'ok');
+    window.scrollTo(0, 0);
+    if (!mal) setTimeout(function () { a.className = 'aviso oculto'; }, 4000);
+  }
+  function mostrar(id) {
+    ['pClave', 'pInicio', 'pForm', 'pLiq'].forEach(function (p) { $(p).className = p === id ? '' : 'oculto'; });
+    window.scrollTo(0, 0);
+  }
+  // Dirección del Google Sheet (Apps Script) que guarda y liquida. La usa la app instalada en el celular.
+  var API = 'https://script.google.com/macros/s/AKfycbyuSojD7HpbTZeGt_gQLaxeaXWzHrSmDAEtLyr58P_62juZMyxFvn-xM_s2ZDqHvTF3uA/exec';
+
+  function servidor(alTerminar) {
+    cargando(true);
+    var bien = function (r) { cargando(false); alTerminar(r); };
+    var falla = function (e) {
+      cargando(false); aviso(e.message.replace(/^Error:\s*/, ''), true);
+      if (/clave/i.test(e.message)) { try { localStorage.removeItem('pinNomina'); } catch (x) {} mostrar('pClave'); }
+    };
+    // Abierta desde el enlace de Google usa google.script.run; instalada como app llama al mismo servidor por internet.
+    if (window.google && google.script) return google.script.run.withSuccessHandler(bien).withFailureHandler(falla);
+    return new Proxy({}, {
+      get: function (_, fn) {
+        return function () {
+          fetch(API, { method: 'POST', body: JSON.stringify({ fn: fn, args: [].slice.call(arguments) }) })
+            .then(function (r) { return r.json(); })
+            .then(function (j) { if (j.ok) bien(j.datos); else falla({ message: j.error }); })
+            .catch(function () { falla({ message: 'No hay conexión a internet. Intente de nuevo.' }); });
+        };
+      }
+    });
+  }
+
+  function entrar() { pin = $('clave').value.trim(); servidor(function (r) { try { localStorage.setItem('pinNomina', pin); } catch (x) {} pintar(r); mostrar('pInicio'); }).apiInicio(pin, null); }
+  function cambiarPeriodo(pid) { servidor(pintar).apiInicio(pin, pid); }
+
+  function pintar(r) {
+    D = r;
+    $('tEmpresa').textContent = r.empresa;
+    $('tPeriodo').textContent = 'Quincena del ' + r.periodo.texto;
+    $('bActual').className = 'opcion' + (r.periodo.id === r.actual ? ' sel' : '');
+    $('bAnterior').className = 'opcion' + (r.periodo.id === r.anterior ? ' sel' : '');
+    $('lista').innerHTML = r.novedades.length ? r.novedades.map(function (n) {
+      var cant = n.unidad === 'pesos' ? pesos(n.cantidad) : n.cantidad + ' ' + n.unidad;
+      return '<div class="tarjeta"><button class="borrar" onclick="eliminar(\'' + esc(n.id) + '\')">Borrar</button><b>' + esc(n.empleado) + '</b>' +
+        '<small>' + esc((r.tipos[n.tipo] || {}).n || n.tipo) + '</small><small>' + esc(n.fecha) + ' · <b>' + esc(cant) + '</b>' + (n.obs ? ' · ' + esc(n.obs) : '') + '</small></div>';
+    }).join('') : '<div class="tarjeta">Todavía no hay novedades en esta quincena.</div>';
+  }
+
+  function abrirFormulario() {
+    sel = { idEmp: '', cat: '', tipo: '' };
+    $('fEmpleados').innerHTML = D.empleados.map(function (e) {
+      return '<button class="opcion" data-emp="' + esc(e.id) + '" onclick="elegirEmp(\'' + esc(e.id) + '\')">' + esc(e.nombre) + '</button>';
+    }).join('');
+    $('fTipos').innerHTML = ''; $('fDetalle').className = 'oculto'; $('fObs').value = ''; $('fCantidad').value = '';
+    $('fFecha').value = (D.hoy >= D.periodo.desde && D.hoy <= D.periodo.hasta) ? D.hoy : D.periodo.hasta;
+    marcar('[data-cat]', 'cat', '');
+    mostrar('pForm');
+  }
+  function marcar(selector, attr, valor) {
+    document.querySelectorAll(selector).forEach(function (b) { b.className = 'opcion' + (b.dataset[attr] === valor ? ' sel' : ''); });
+  }
+  function elegirEmp(id) { sel.idEmp = id; marcar('[data-emp]', 'emp', id); }
+  function elegirCat(cat) {
+    sel.cat = cat; sel.tipo = ''; marcar('[data-cat]', 'cat', cat); $('fDetalle').className = 'oculto';
+    $('fTipos').innerHTML = Object.keys(D.tipos).filter(function (k) { return D.tipos[k].cat === cat; }).map(function (k) {
+      return '<button class="opcion" data-tipo="' + k + '" onclick="elegirTipo(\'' + k + '\')">' + esc(D.tipos[k].n) + '</button>';
+    }).join('');
+  }
+  function elegirTipo(k) {
+    sel.tipo = k; marcar('[data-tipo]', 'tipo', k);
+    var u = D.tipos[k].u;
+    $('tCantidad').textContent = u === 'pesos' ? '4. ¿Cuánta plata? (en pesos)' : (u === 'horas' ? '4. ¿Cuántas horas?' : '4. ¿Cuántos días?');
+    $('pDia').className = u === 'horas' ? '' : 'oculto';
+    $('tFecha').textContent = u === 'días' ? '3. ¿Desde qué día?' : '3. ¿Qué día?';
+    $('fCantidad').value = u === 'pesos' ? '' : (k === 'DESC' ? 3 : 1);
+    $('fDetalle').className = '';
+  }
+  function sumar(n) {
+    var paso = D.tipos[sel.tipo].u === 'pesos' ? 10000 : 1;
+    $('fCantidad').value = Math.max(0, (Number($('fCantidad').value) || 0) + n * paso);
+  }
+  function diaCompleto() { $('fCantidad').value = D.horasDia; }
+
+  function guardar() {
+    if (!sel.idEmp) return aviso('Falta escoger el trabajador', true);
+    if (!sel.tipo) return aviso('Falta escoger qué pasó', true);
+    var nov = { idEmp: sel.idEmp, tipo: sel.tipo, fecha: $('fFecha').value, cantidad: $('fCantidad').value, obs: $('fObs').value, periodo: D.periodo.id };
+    servidor(function (r) { pintar(r); mostrar('pInicio'); aviso('Novedad guardada ✔'); }).apiGuardar(pin, nov);
+  }
+  function eliminar(id) {
+    if (!confirm('¿Borrar esta novedad?')) return;
+    servidor(function (r) { pintar(r); aviso('Novedad borrada'); }).apiEliminar(pin, id, D.periodo.id);
+  }
+
+  function verLiquidacion() {
+    servidor(function (r) {
+      var lineas = function (l) { return l.map(function (x) { return '<tr><td>' + esc(x.c) + (x.n ? ' (' + esc(x.n) + ')' : '') + '</td><td>' + pesos(x.v) + '</td></tr>'; }).join(''); };
+      $('liqDetalle').innerHTML = r.resultados.map(function (x) {
+        return '<div class="tarjeta"><b>' + esc(x.nombre) + '</b><small>' + x.diasTrab + ' días trabajados</small>' +
+          '<table>' + lineas(x.dev) + '<tr><td><b>Total ganado</b></td><td><b>' + pesos(x.totalDev) + '</b></td></tr>' +
+          lineas(x.ded) + '<tr><td><b>Total descuentos</b></td><td><b>' + pesos(x.totalDed) + '</b></td></tr></table>' +
+          '<div class="neto">Valor a girar: ' + pesos(x.neto) + '</div></div>';
+      }).join('') + '<div class="tarjeta"><b>Total a girar esta quincena</b><div class="neto">' + pesos(r.totalNeto) + '</div></div>';
+      mostrar('pLiq');
+    }).apiPrevia(pin, D.periodo.id);
+  }
+  function liquidar() {
+    if (!confirm('¿Cerrar la quincena del ' + D.periodo.texto + ' y enviar los desprendibles por correo?')) return;
+    servidor(function (r) { mostrar('pInicio'); aviso('Quincena cerrada ✔ Total a girar: ' + pesos(r.totalNeto)); }).apiLiquidar(pin, D.periodo.id);
+  }
+
+  (function () {
+    var guardado = ''; try { guardado = localStorage.getItem('pinNomina') || ''; } catch (x) {}
+    if (guardado) { $('clave').value = guardado; entrar(); }
+  })();
+</script>
+<script>
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
